@@ -1,0 +1,11 @@
+user,item,rating,weather,tod,tow
+u1,p1,4,clear,morning,weekdays
+u1,p1,3,raining,evening,weekend
+u2,p1,5,clear,morning,weekdays
+u2,p2,2,clear,evening,weekdays
+u2,p2,4,raining,afternoon,weekdays
+u3,p1,5,raining,evening,weekend
+u3,p1,3,raining,morning,weekend
+u3,p2,1,clear,afternoon,weekdays
+u4,p2,2,raining,afternoon,weekdays
+u4,p2,4,clear,morning,weekend

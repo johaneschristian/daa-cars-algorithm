@@ -4,6 +4,7 @@ import time
 from itertools import product as cartesian_product
 
 def pre_process(file_name):
+    print("Pre Processing Stage")
     users = set()
     items = set()
     rating_values = set()
@@ -33,6 +34,7 @@ def pre_process(file_name):
 
 
 def split_items(data: list, users: list, items: list, contexts: list, max_rating) -> tuple:
+    print("Split Item Stage")
     # Produce new context C, a result of cartesian product of the previous contexts
     # Produce new context T, a result of items x context_C
     context_T = list(cartesian_product(items, *contexts))
@@ -59,6 +61,7 @@ def split_items(data: list, users: list, items: list, contexts: list, max_rating
 # @param k=number of similar users to consider
 # @return index of item node to be recommended
 def generate_recommendation(current_user: int, similarity_score_matrix: list, rating_matrix: list, k: int, convert_item_index: list, context: list) -> int:
+    print("Generation Recommendation Stage")
     # Find k users with highest similarity to user_node_index
     scores = similarity_score_matrix[current_user]
 
@@ -111,13 +114,14 @@ def generate_recommendation(current_user: int, similarity_score_matrix: list, ra
             recommended_item_index = item_index
             recommended_item_rating = inferred_ratings[i][1]
     
-    return recommended_item_index, recommended_item_rating
+    return recommended_item_index
 
         
 # @param rating_matrix rm[i][j] contains the rating
 #        given by user at node i to item at node j
 # @return adjacency matrix of size |U|+|T| x |U|+|T|
 def construct_graph_adjacency_matrix(rating_matrix: list) -> list:
+    print("Construct Graph Stage")
     number_of_users = len(rating_matrix)
     number_of_items = len(rating_matrix[0])
 
@@ -141,41 +145,48 @@ def construct_graph_adjacency_matrix(rating_matrix: list) -> list:
 # @param LMax, maximum length for a path from a user node to another
 # @param number_of_users: number of user nodes
 # @param number_of_items: number of item nodes
-def graph_node_similarity(adjacency_matrix: list, LMax: int, number_of_users: int, number_of_items: int) -> list:
+def graph_node_similarity(rating_matrix: list, LMax: int, number_of_users: int, number_of_items: int) -> list:
+    print("Graph Node Similarity")
     # Note that W is adjacency_matrix at |U|+1 to |U|+|T|
-    W = parse_matrix(adjacency_matrix, 
-                        0, 
-                        number_of_users,
-                        number_of_users,
-                        number_of_users+number_of_items
-                    )
     
-    WT = parse_matrix(adjacency_matrix,
-                        number_of_users,
-                        number_of_users+number_of_items,
-                        0,
-                        number_of_users
-                    )
 
-    return calculate_similarity(W, WT, LMax)
+    return improved_calculate_similarity(rating_matrix, LMax)
 
 
-def calculate_similarity(W: list, WT: list, LMax: int) -> list:
+def multiply_WWT(W):
+    matrix = generate_matrix(len(W), len(W))
+    for k in range(len(W)):
+        for i in range(len(W)):
+            for j in range(len(W[0])):
+                temp1 = 0
+                temp2 = 0
+                
+                if W[i][j] != None:
+                   temp1 = W[i][j]
+                if W[k][j] != None:
+                    temp2 = W[k][j]
+
+                matrix[k][i] = temp1 * temp2
+    
+    return matrix
+
+def improved_calculate_similarity(W: list, LMax: int) -> list:
+    print("Calculate Similarity Stage")
     L = 2
-    M = multiply_matrix(W, WT)
+    M = multiply_WWT(W)
+    WWT = multiply_WWT(W)
 
     while L != LMax:
-        WWT = multiply_matrix(W, WT)
-        M = multiply_matrix(WWT, M)
+        M = improved_multiply_matrix(WWT, M)
         L = L + 2
     
     return M
 
-
 # @param matrix_A = 2 dimensional matrix of size A X B
 # @param matrix_B = 2 dimensional matrix of size B X C
 # @return result = matrix_A x matrix_B of size A x C
-def multiply_matrix(matrix_A: list, matrix_B: list, ) -> list:
+def improved_multiply_matrix(matrix_A: list, matrix_B: list, ) -> list:
+    print("Multiply Matrix Stage")
     result = []
 
     for m in range(len(matrix_A)):
@@ -184,7 +195,15 @@ def multiply_matrix(matrix_A: list, matrix_B: list, ) -> list:
             result[m].append(0)
     
             for k in range(len(matrix_A[m])):
-                result[m][r] += matrix_A[m][k] * matrix_B[k][r]
+                temp1 = 0
+                temp2 = 0
+                
+                if matrix_A[m][k] != None:
+                   temp1 = matrix_A[m][k]
+                if matrix_B[k][r] != None:
+                    temp2 = matrix_B[m][k]
+
+                result[m][r] += temp1 * temp2
     
     return result
 
@@ -192,6 +211,7 @@ def multiply_matrix(matrix_A: list, matrix_B: list, ) -> list:
 # end_row and end_column excluded
 def parse_matrix(matrix: list, start_row: int, end_row: int, 
     start_column: int, end_column: int) -> list:
+    print("Parse Matrix Stage")
     
     result = matrix[start_row:end_row]
 
@@ -202,6 +222,7 @@ def parse_matrix(matrix: list, start_row: int, end_row: int,
 
 
 def generate_matrix(n: int, m: int, default: int = 0) -> list:
+    print("Generate Matrix Stage", n, m)
     matrix = []
 
     for i in range(n):
@@ -210,6 +231,7 @@ def generate_matrix(n: int, m: int, default: int = 0) -> list:
             temp.append(default)
         matrix.append(temp)
     
+    print("Generate Matrix Done")
     return matrix
 
 
@@ -221,26 +243,26 @@ def print_matrix(matrix):
 
 
 if __name__ == '__main__':
+
     start_time = time.process_time()
-    CURRENT_USER = 'u1'
-    data, users, items, contexts, max_rating = pre_process("dummy_ratings.csv")
+    CURRENT_USER = '3FA27F6E8AC712A82C69C4EDD8B912CC'
+    data, users, items, contexts, max_rating = pre_process("tripadvisorv2.csv")
     current_user_index = users.index(CURRENT_USER)
     rating_matrix, items = split_items(data, users, items, contexts, max_rating)
-    adjacency_matrix = construct_graph_adjacency_matrix(rating_matrix)
-    similarity_scores = graph_node_similarity(adjacency_matrix, 6, len(users), len(items))
+    # adjacency_matrix = construct_graph_adjacency_matrix(rating_matrix)
+    similarity_scores = improved_calculate_similarity(rating_matrix, 2)
     
-    print(similarity_scores)
-    selected_index, rating = generate_recommendation(
+    selected_index = generate_recommendation(
         current_user_index, 
         similarity_scores, 
         rating_matrix,
         2,
         items,
-        ("clear","afternoon","weekdays","A","B")
+        ("WI","CENTRAL","CINCINNATI","OH","EASTERN","FAMILY")
     )
 
     if selected_index:
-        print(items[selected_index], rating)
+        print(items[selected_index])
     else:
         print("No matching recommendation")
     end_time = time.process_time()
